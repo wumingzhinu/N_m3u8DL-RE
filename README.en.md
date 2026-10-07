@@ -22,6 +22,41 @@ yay -Syu n-m3u8dl-re-git
 
 ---
 
+## Termux (Android)
+
+Running on [Termux](https://termux.dev) requires the `linux-bionic-arm64` NativeAOT build, which this repository's GitHub Actions can produce.
+
+Trigger `Build Latest` from the Actions page of your fork, or use the GitHub CLI:
+
+```bash
+gh workflow run build_latest.yml -f ref=main -f tag=v0.0.0 -f doRelease=false
+gh run download <run-id> --name android-bionic-arm64
+```
+
+Install the dependency (FFmpeg is used for segment merging) and the program:
+
+```bash
+pkg install ffmpeg
+tar -xzf N_m3u8DL-RE_*_android-bionic-arm64_*.tar.gz
+mkdir -p $PREFIX/lib/N_m3u8DL-RE
+install -m 755 N_m3u8DL-RE $PREFIX/lib/N_m3u8DL-RE/N_m3u8DL-RE
+```
+
+.NET's OpenSSL shim resolves to the symbol stubs under `/system/lib64` (missing `a2d_ASN1_OBJECT`) on default lookup paths, which makes manifest loading fail with `Cannot get required symbol`. Make the linker prefer Termux's OpenSSL by using a wrapper instead of executing the binary directly:
+
+```sh
+# $PREFIX/bin/N_m3u8DL-RE
+#!/data/data/com.termux/files/usr/bin/sh
+PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$PREFIX/lib/N_m3u8DL-RE/N_m3u8DL-RE" "$@"
+```
+
+```bash
+chmod +x $PREFIX/bin/N_m3u8DL-RE
+N_m3u8DL-RE "<url>" --auto-select --save-dir ~/storage/shared/Download
+```
+
 ## PowerShell completion
 
 Supports Windows PowerShell 5.1 and PowerShell 7. The completion script is embedded in the executable. Add `N_m3u8DL-RE` to `PATH`, then load it in PowerShell:

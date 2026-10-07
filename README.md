@@ -24,6 +24,41 @@ yay -Syu n-m3u8dl-re-git
 
 ---
 
+## Termux (Android)
+
+在 [Termux](https://termux.dev) 上使用需要 `linux-bionic-arm64` 的 NativeAOT 版本，可由本仓库的 GitHub Actions 直接产出。
+
+在 fork 的 Actions 页面手动运行 `Build Latest`，或使用 GitHub CLI：
+
+```bash
+gh workflow run build_latest.yml -f ref=main -f tag=v0.0.0 -f doRelease=false
+gh run download <run-id> --name android-bionic-arm64
+```
+
+安装依赖与程序（FFmpeg 用于分片合并）：
+
+```bash
+pkg install ffmpeg
+tar -xzf N_m3u8DL-RE_*_android-bionic-arm64_*.tar.gz
+mkdir -p $PREFIX/lib/N_m3u8DL-RE
+install -m 755 N_m3u8DL-RE $PREFIX/lib/N_m3u8DL-RE/N_m3u8DL-RE
+```
+
+.NET 的 OpenSSL 封装按默认路径会解析到 `/system/lib64` 下的符号桩库（缺少 `a2d_ASN1_OBJECT`），导致加载清单时抛出 `Cannot get required symbol`。需让 linker 优先使用 Termux 自带的 OpenSSL，因此用 wrapper 代替直接执行：
+
+```sh
+# $PREFIX/bin/N_m3u8DL-RE
+#!/data/data/com.termux/files/usr/bin/sh
+PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$PREFIX/lib/N_m3u8DL-RE/N_m3u8DL-RE" "$@"
+```
+
+```bash
+chmod +x $PREFIX/bin/N_m3u8DL-RE
+N_m3u8DL-RE "<url>" --auto-select --save-dir ~/storage/shared/Download
+```
+
 ## PowerShell 补全
 
 支持 Windows PowerShell 5.1 和 PowerShell 7。补全脚本内嵌在可执行文件中。将 `N_m3u8DL-RE` 加入 `PATH`，然后在 PowerShell 中加载：
